@@ -1,89 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import './PersonalityTest.css';
 
 const PersonalityTest = () => {
-  const [step, setStep] = useState(0);
-  const [choices, setChoices] = useState([]);
-  const [result, setResult] = useState(null);
+  const [displayImages, setDisplayImages] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [personality, setPersonality] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const questions = [
-    { 
-      q: "Which environment fuels your focus?", 
-      options: ["Neon Metropolis", "Ancient Library", "Deep Abyss", "Floating Garden"] 
-    },
-    { 
-      q: "Choose your primary element:", 
-      options: ["Electric Pulse", "Solid Granite", "Flowing Ether", "Solar Flare"] 
-    }
-  ];
-
-  const handleSelection = (option) => {
-    const updatedChoices = [...choices, option];
-    setChoices(updatedChoices);
-
-    if (step < questions.length - 1) {
-      setStep(step + 1);
-    } else {
-      generateAIResponse(updatedChoices);
-    }
-  };
-
-  const generateAIResponse = async (finalChoices) => {
+  const fetchAIImages = async () => {
     setLoading(true);
-    setResult(null);
+    setErrorMsg("");
+    setPersonality(null);
+    setSelectedIds([]);
     try {
-      const response = await fetch('http://localhost:3002/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: `A spiritual fusion of ${finalChoices.join(" and ")} digital art style` 
-        }),
-      });
-      const data = await response.json();
-      setResult(data.imageUrl);
-    } catch (error) {
-      alert("Error: Ensure Backend (Port 3002) is running in the terminal!");
+      const res = await fetch('http://localhost:3002/api/ai/test-images');
+      if (!res.ok) throw new Error(`Server Status: ${res.status}`);
+      const data = await res.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        setDisplayImages(data);
+      } else {
+        setErrorMsg("Backend returned zero images.");
+      }
+    } catch (err) {
+      setErrorMsg(`Connection Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const startOver = () => {
-    setStep(0);
-    setChoices([]);
-    setResult(null);
+  useEffect(() => {
+    fetchAIImages();
+  }, []);
+
+  const toggleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(i => i !== id));
+    } else if (selectedIds.length < 3) {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const analyzePersonality = () => {
+    const chosenOnes = displayImages.filter(img => selectedIds.includes(img._id));
+    const traits = chosenOnes.map(c => c.trait).join(' and ');
+    setPersonality(`PicPoint Analysis: You have a ${traits} vibe.`);
   };
 
   return (
     <div className="personality-test-wrapper">
       <h2 className="glow-title">AI Personality Synthesis</h2>
 
-      {!loading && !result && (
-        <div className="quiz-card">
-          <p className="question-text">{questions[step].q}</p>
-          <div className="options-grid">
-            {questions[step].options.map((opt) => (
-              <button key={opt} onClick={() => handleSelection(opt)} className="opt-btn">
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {errorMsg && <p className="error-banner">{errorMsg}</p>}
 
-      {loading && (
+      {loading ? (
         <div className="loader-container">
           <div className="spinner"></div>
-          <p>Analyzing your digital signature...</p>
+          <p>Generating your unique visual profile...</p>
         </div>
-      )}
+      ) : (
+        <>
+          {!personality ? (
+            <div className="selection-area">
+              <p className="subtitle">Select 2-3 images that resonate with you</p>
+              
+              {/* Grid with side-by-side images */}
+              <div className="options-grid">
+                {displayImages.map((img) => (
+                  <div 
+                    key={img._id} 
+                    className={`img-card ${selectedIds.includes(img._id) ? 'selected' : ''}`}
+                    onClick={() => toggleSelect(img._id)}
+                  >
+                    <img src={img.url} alt="AI Choice" />
+                    {selectedIds.includes(img._id) && <div className="badge">✓</div>}
+                  </div>
+                ))}
+              </div>
 
-      {result && (
-        <div className="result-container">
-          <h3 className="result-header">Your Visual Archetype:</h3>
-          <img src={result} alt="AI Personality Vibe" className="generated-vibe" />
-          <button onClick={startOver} className="retry-btn">Retest Personality</button>
-        </div>
+              {/* Centered Analyze Button */}
+              <div className="btn-wrapper">
+                <button 
+                  className="analyze-btn" 
+                  disabled={selectedIds.length < 2}
+                  onClick={analyzePersonality}
+                >
+                  Analyze My Personality
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="result-container">
+              <div className="result-card">
+                <h3>Your Aesthetic Identity</h3>
+                <p className="personality-text">{personality}</p>
+                <button onClick={fetchAIImages} className="retake-btn">
+                  Retake the Test
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
