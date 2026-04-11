@@ -1,31 +1,31 @@
 require('dotenv').config();
-console.log("DEBUG: Your URI is:", process.env.MONGO_URI);
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const app = express();
 
+// Load Environment Variables
+const MONGO_URI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 3002;
+
+// Middleware
 app.use(cors());
-// Increase the limit for JSON and URL-encoded data
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-// YOUR CONNECTION STRING
-//const MONGO_URI = "mongodb+srv://addulakeerthana575_db_user:ai6Gw8l6bWoSb3r0@cluster0.vwaf3qo.mongodb.net/picpoint?retryWrites=true&w=majority&appName=Cluster0";
 
-const MONGO_URI = process.env.MONGO_URI
-
+// Database Connection
 mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ PicPoint connected to MongoDB Atlas Cloud"))
   .catch(err => console.log("❌ DB Error:", err));
 
-// SCHEMAS (User for Profile/Auth, Post for Global Feed)
+// --- SCHEMAS ---
 const UserSchema = new mongoose.Schema({
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     bio: { type: String, default: "CSE Student | PicPoint Explorer" }
 });
+
 const PostSchema = new mongoose.Schema({
     imageUrl: String,
     uploader: String,
@@ -38,14 +38,12 @@ const PostSchema = new mongoose.Schema({
         text: String,
         createdAt: { type: Date, default: Date.now }
     }]
-});
-
-
+}, { timestamps: true });
 
 const User = mongoose.model('User', UserSchema);
 const Post = mongoose.model("Post", PostSchema);
 
-// AUTH ROUTES
+// --- AUTH ROUTES ---
 app.post('/signup', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -57,6 +55,35 @@ app.post('/signup', async (req, res) => {
     }
 });
 
+app.get('/api/ai/test-images', async (req, res) => {
+  try {
+    // A larger pool of high-quality IDs to pick from
+    const pool = [
+      { name: "Nature", trait: "Peaceful", ids: ["photo-1501854140801-50d01698950b", "photo-1441974231531-c6227db76b6e", "photo-1470071459604-3b5ec3a7fe05"] },
+      { name: "Cyber", trait: "Bold", ids: ["photo-1550684848-fac1c5b4e853", "photo-1518770660439-4636190af475", "photo-1510511459019-5dee0c12fe85"] },
+      { name: "Abstract", trait: "Creative", ids: ["photo-1541701494587-cb58502866ab", "photo-1550684847-75bdda21cc95", "photo-1506744038136-46273834b3fb"] },
+      { name: "Minimal", trait: "Focused", ids: ["photo-1494438639946-1ebd1d20bf85", "photo-1451187580459-43490279c0fa", "photo-1487014679447-9f8336841d58"] },
+      { name: "Vintage", trait: "Nostalgic", ids: ["photo-1518531933037-91b2f5f229cc", "photo-1516035069371-29a1b244cc32", "photo-1485846234645-a62644f84728"] }
+    ];
+
+    const finalImages = pool.map((cat, i) => {
+      // Pick one random ID from the 3 options in each category
+      const randomId = cat.ids[Math.floor(Math.random() * cat.ids.length)];
+      
+      return {
+        _id: `ai_${Date.now()}_${i}_${Math.random()}`,
+        // The timestamp (?t=${Date.now()}) kills the browser cache
+        url: `https://images.unsplash.com/${randomId}?auto=format&fit=crop&w=600&q=80&t=${Date.now()}_${i}`,
+        trait: cat.trait,
+        category: cat.name
+      };
+    });
+
+    res.json(finalImages);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate images" });
+  }
+});
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email, password });
@@ -64,36 +91,12 @@ app.post('/login', async (req, res) => {
     else res.status(401).json({ message: "Invalid credentials" });
 });
 
-// INSTAGRAM-STYLE GALLERY ROUTES
-// server/index.js
-
-app.post('/upload', async (req, res) => {
-  try {
-    // 1. We take 'uploader' from the frontend (which is Keerthana)
-    const { imageUrl, uploader, caption, category } = req.body; 
-
-    const newPost = new Post({ 
-      imageUrl, 
-      uploader: uploader, // ✅ THIS MUST BE 'uploader', NOT 'username'
-      caption, 
-      category 
-    });
-
-    await newPost.save();
-    res.send({ message: "Post uploaded!" });
-  } catch (err) {
-    console.error("Upload Error:", err);
-    res.status(500).send({ error: "Upload failed" });
-  }
-});
-
+// --- GALLERY & POST ROUTES ---
 app.get('/posts', async (req, res) => {
     try {
         const { category } = req.query;
         let query = {};
-        if (category && category !== 'All') {
-            query.category = category;
-        }
+        if (category && category !== 'All') query.category = category;
         const posts = await Post.find(query).sort({ createdAt: -1 });
         res.json(posts);
     } catch (err) {
@@ -101,10 +104,17 @@ app.get('/posts', async (req, res) => {
     }
 });
 
+app.post('/upload', async (req, res) => {
+  try {
+    const { imageUrl, uploader, caption, category } = req.body; 
+    const newPost = new Post({ imageUrl, uploader, caption, category });
+    await newPost.save();
+    res.send({ message: "Post uploaded!" });
+  } catch (err) {
+    res.status(500).send({ error: "Upload failed" });
+  }
+});
 
-// --- ADD THESE NEW ROUTES TO YOUR index.js ---
-
-// Delete a Post (Only if the uploader matches)
 app.delete('/posts/:id', async (req, res) => {
     try {
         await Post.findByIdAndDelete(req.params.id);
@@ -112,76 +122,89 @@ app.delete('/posts/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
 
-// Update Profile Info
-app.put('/user/:id', async (req, res) => {
-    try {
-        const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json(updatedUser);
-    } catch (err) { res.status(500).json({ error: "Update failed" }); }
-});
-
-// Get User Specific Posts
-app.get('/posts/user/:username', async (req, res) => {
-    try {
-        const posts = await Post.find({ uploader: req.params.username }).sort({ createdAt: -1 });
-        res.json(posts);
-    } catch (err) { res.status(500).json({ error: "Fetch failed" }); }
-});
-app.put('/posts/:id', async (req, res) => {
-    try {
-        const updatedPost = await Post.findByIdAndUpdate(
-            req.params.id, 
-            { caption: req.body.caption }, 
-            { new: true }
-        );
-        res.json(updatedPost);
-    } catch (err) { res.status(500).json({ error: "Edit failed" }); }
-});
-// --- LIKE ROUTE ---
+// --- LIKE & COMMENT LOGIC ---
 app.post('/posts/:id/like', async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-        if (!post) return res.status(404).json({ message: "Post not found" });
-
         const { username } = req.body;
         if (post.likes.includes(username)) {
-            post.likes = post.likes.filter(name => name !== username); // Unlike
+            post.likes = post.likes.filter(name => name !== username);
         } else {
-            post.likes.push(username); // Like
+            post.likes.push(username);
         }
         await post.save();
         res.json(post);
-    } catch (err) { 
-        console.error("Like Error:", err);
-        res.status(500).json({ error: "Like failed" }); 
-    }
+    } catch (err) { res.status(500).json({ error: "Like failed" }); }
 });
 
-// --- COMMENT ROUTE ---
 app.post('/posts/:id/comment', async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-        if (!post) return res.status(404).json({ message: "Post not found" });
-
-        post.comments.push({ 
-            username: req.body.username, 
-            text: req.body.text 
-        });
+        post.comments.push({ username: req.body.username, text: req.body.text });
         await post.save();
         res.json(post);
-    } catch (err) { 
-        console.error("Comment Error:", err);
-        res.status(500).json({ error: "Comment failed" }); 
+    } catch (err) { res.status(500).json({ error: "Comment failed" }); }
+});
+
+// --- PROFILE & GALLERY REPAIR ---
+
+// 1. EDIT PROFILE: This handles the PUT request from Profile.jsx
+app.put('/user/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedUser = await User.findByIdAndUpdate(
+            id, 
+            { $set: req.body }, 
+            { new: true }
+        );
+        console.log("✅ Profile Updated in DB:", updatedUser.username);
+        res.json(updatedUser);
+    } catch (err) {
+        console.error("❌ Edit Error:", err);
+        res.status(500).json({ error: "Could not update profile" });
     }
 });
 
-app.delete('/posts/:postId/comment/:commentId', async (req, res) => {
+// 2. MY GALLERY: This finds images where 'uploader' matches your username
+app.get('/posts/user/:username', async (req, res) => {
     try {
-        const post = await Post.findById(req.params.postId);
-        post.comments = post.comments.filter(c => c._id.toString() !== req.params.commentId);
-        await post.save();
-        res.json(post);
-    } catch (err) { res.status(500).send(err); }
+        const { username } = req.params;
+        console.log(`🔍 Searching for posts by: ${username}`);
+        
+        // This looks at the 'uploader' field in your PostSchema
+        const userPosts = await Post.find({ uploader: username }).sort({ createdAt: -1 });
+        
+        res.json(userPosts);
+    } catch (err) {
+        console.error("❌ Gallery Fetch Error:", err);
+        res.status(500).json({ error: "Could not load gallery" });
+    }
+});
+// --- PERSONALITY TEST ROUTE (DYNAMNIC & STABLE) ---
+app.get('/api/ai/test-images', async (req, res) => {
+  console.log("🚀 Generating Fresh Test Images...");
+  try {
+    // We use high-quality Unsplash source with random 'sig' to ensure no repeats
+    const categories = [
+      { name: "Nature", trait: "Peaceful & Grounded", imgId: "photo-1501854140801-50d01698950b" },
+      { name: "Cyberpunk", trait: "Visionary & Bold", imgId: "photo-1550684848-fac1c5b4e853" },
+      { name: "Abstract", trait: "Creative & Chaotic", imgId: "photo-1541701494587-cb58502866ab" },
+      { name: "Minimalist", trait: "Focused & Calm", imgId: "photo-1494438639946-1ebd1d20bf85" },
+      { name: "Vintage", trait: "Nostalgic & Warm", imgId: "photo-1518531933037-91b2f5f229cc" }
+    ];
+
+    const finalImages = categories.map((cat, i) => ({
+      _id: `ai_${Date.now()}_${i}`,
+      // Adding a random signal ensures the browser doesn't cache the image
+      url: `https://images.unsplash.com/${cat.imgId}?auto=format&fit=crop&w=600&q=80&sig=${Math.random()}`,
+      trait: cat.trait,
+      category: cat.name
+    }));
+
+    res.json(finalImages);
+  } catch (err) {
+    res.status(500).json({ error: "Image generation failed" });
+  }
 });
 
-app.listen(3002, () => console.log('🚀 PicPoint Server running on Port 3002'));
+app.listen(PORT, () => console.log(`🚀 PicPoint Server running on Port ${PORT}`));
