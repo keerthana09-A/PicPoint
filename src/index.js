@@ -1,7 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-// const mongoose = require('mongoose');
-const app = express();
 
 // This tells the backend to trust your Vercel frontend
 app.use(cors({
