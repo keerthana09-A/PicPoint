@@ -1,48 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; 
+import React, { useState, useEffect, useCallback } from 'react';
+// REMOVED: import { useNavigate } from 'react-router-dom';  (Vercel fails if this is unused)
 import './Profile.css';
-// import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
-// ... other imports
 
 const Profile = () => {
-  // Line 6 fix: REMOVED 'const navigate = useNavigate()' since it wasn't used
-  const [posts, setPosts] = useState([]);
+  // 1. UPDATE THIS URL to your actual Render Backend URL
+  const BACKEND_URL = "https://picpoint-backend.onrender.com"; 
 
-  // useEffect fix: Wrap your function in useCallback so React is happy
+  const [myPosts, setMyPosts] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [viewingComments, setViewingComments] = useState(null);
+  const [activeMenu, setActiveMenu] = useState(null); 
+  
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem('picpoint_user')) || { username: 'User', bio: 'PicPoint Explorer' }
+  );
+  const [editBio, setEditBio] = useState(user.bio);
+
+  // 2. Wrapped in useCallback to prevent "missing dependency" build errors on Vercel
   const fetchMyPosts = useCallback(async () => {
     try {
-      const response = await fetch('https://picpoint-backend.onrender.com/api/my-posts');
-      const data = await response.json();
-      setPosts(data);
-    } catch (err) {
-      console.error(err);
+      const res = await fetch(`${BACKEND_URL}/posts/user/${user.username}?t=${Date.now()}`);
+      const data = await res.json();
+      setMyPosts(Array.isArray(data) ? data : []);
+    } catch (err) { 
+      console.error("Fetch error:", err); 
     }
-  }, []); // Empty array here is fine
+  }, [user.username, BACKEND_URL]);
 
-  useEffect(() => {
-    fetchMyPosts();
-  }, [fetchMyPosts]); // Now we can safely include it here
-// const Profile = () => {
-//   // const navigate = useNavigate();
-//   const [myPosts, setMyPosts] = useState([]);
-//   const [isEditing, setIsEditing] = useState(false);
-//   const [viewingComments, setViewingComments] = useState(null);
-//   const [activeMenu, setActiveMenu] = useState(null); // State for the 3-dot menu
-  
-//   const [user, setUser] = useState(
-//     JSON.parse(localStorage.getItem('picpoint_user')) || { username: 'User', bio: 'PicPoint Explorer' }
-//   );
-//   const [editBio, setEditBio] = useState(user.bio);
-
-  // const fetchMyPosts = async () => {
-  //   try {
-  //     const res = await fetch(`http://localhost:3002/posts/user/${user.username}?t=${Date.now()}`);
-  //     const data = await res.json();
-  //     setMyPosts(Array.isArray(data) ? data : []);
-  //   } catch (err) { console.error("Fetch error:", err); }
-  // };
-
-  // useEffect(() => { fetchMyPosts(); }, [user.username]);
+  useEffect(() => { 
+    fetchMyPosts(); 
+  }, [fetchMyPosts]);
 
   const handleLogout = () => {
     localStorage.removeItem('picpoint_user');
@@ -51,7 +38,7 @@ const Profile = () => {
 
   const saveProfile = async () => {
     try {
-      const res = await fetch(`http://localhost:3002/user/${user._id}`, {
+      const res = await fetch(`${BACKEND_URL}/user/${user._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bio: editBio })
@@ -65,11 +52,10 @@ const Profile = () => {
     } catch (err) { console.error("Update error:", err); }
   };
 
-  // --- NEW: Handle Post Deletion ---
   const handleDeletePost = async (postId) => {
     if (window.confirm("Are you sure you want to delete this post?")) {
       try {
-        const res = await fetch(`http://localhost:3002/posts/${postId}`, { method: 'DELETE' });
+        const res = await fetch(`${BACKEND_URL}/posts/${postId}`, { method: 'DELETE' });
         if (res.ok) {
           setMyPosts(myPosts.filter(p => p._id !== postId));
           setActiveMenu(null);
@@ -78,12 +64,11 @@ const Profile = () => {
     }
   };
 
-  // --- NEW: Handle Post Edit (Caption only) ---
   const handleEditPost = async (post) => {
     const newCaption = prompt("Edit your caption:", post.caption);
     if (newCaption !== null && newCaption !== post.caption) {
       try {
-        const res = await fetch(`http://localhost:3002/posts/${post._id}`, {
+        const res = await fetch(`${BACKEND_URL}/posts/${post._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ caption: newCaption })
@@ -139,8 +124,6 @@ const Profile = () => {
           <div key={post._id} className="gallery-item">
             <img src={post.imageUrl} alt="gallery" />
             <div className="gallery-overlay">
-              
-              {/* --- NEW: 3-Dot Menu Section --- */}
               <div className="post-options-container">
                 <button className="three-dots-btn" onClick={(e) => {
                   e.stopPropagation();
@@ -165,7 +148,6 @@ const Profile = () => {
         ))}
       </div>
 
-      {/* Viewing Comments Modal remains exactly as you had it */}
       {viewingComments && (
         <div className="modal-overlay" onClick={() => setViewingComments(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
