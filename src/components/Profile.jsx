@@ -14,13 +14,7 @@ const Profile = () => {
   );
   const [editBio, setEditBio] = useState(user.bio);
 
-  const fetchMyPosts = async () => {
-    try {
-      const res = await fetch(`http://localhost:3002/posts/user/${user.username}?t=${Date.now()}`);
-      const data = await res.json();
-      setMyPosts(Array.isArray(data) ? data : []);
-    } catch (err) { console.error("Fetch error:", err); }
-  };
+ 
 
   useEffect(() => { fetchMyPosts(); }, [user.username]);
 
@@ -73,7 +67,24 @@ const Profile = () => {
     }
     setActiveMenu(null);
   };
+// FIND THIS FUNCTION:
+// FIND THIS FUNCTION:
+// 1. Keep this one (it uses the correct variables for this file)
+const fetchMyPosts = async () => {
+  try {
+    // We use user.username because 'username' alone isn't defined here
+    const res = await fetch(`http://localhost:3002/posts/user/${user.username}?t=${Date.now()}`);
+    const data = await res.json();
+    
+    // We use setMyPosts because 'setPosts' isn't defined here
+    setMyPosts(Array.isArray(data) ? data : []);
+  } catch (err) { 
+    console.error("Fetch error:", err); 
+  }
+};
 
+// 2. DELETE the "const fetchUserPosts" block entirely from your file.
+// It is causing the "username is not defined" error.
   return (
     <div className="profile-page" onClick={() => setActiveMenu(null)}>
       <header className="profile-header">

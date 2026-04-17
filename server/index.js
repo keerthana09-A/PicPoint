@@ -167,18 +167,20 @@ app.put('/user/:id', async (req, res) => {
 });
 
 // 2. MY GALLERY: This finds images where 'uploader' matches your username
+// --- GALLERY REPAIR ---
+// --- GALLERY REPAIR ---
 app.get('/posts/user/:username', async (req, res) => {
     try {
         const { username } = req.params;
-        console.log(`🔍 Searching for posts by: ${username}`);
+        console.log(`🔍 Fetching albums for: ${username}`);
         
-        // This looks at the 'uploader' field in your PostSchema
+        // Find posts where the uploader matches the username
         const userPosts = await Post.find({ uploader: username }).sort({ createdAt: -1 });
         
         res.json(userPosts);
     } catch (err) {
         console.error("❌ Gallery Fetch Error:", err);
-        res.status(500).json({ error: "Could not load gallery" });
+        res.status(500).json({ error: "Could not load albums" });
     }
 });
 
