@@ -1,15 +1,16 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose'); // Ensure mongoose is imported
 const app = express();
 
-// --- THE ULTIMATE CORS FIX ---
+// --- CORS FIX for Vercel and Render ---
 app.use(cors({
   origin: function (origin, callback) {
-    // Allows any Vercel link, local testing, and your Render domain
-    if (!origin || origin.includes('vercel.app') || origin.includes('onrender.com') || origin.includes('localhost')) {
+    // Allows your Vercel URL and local testing
+    if (!origin || origin.includes('vercel.app') || origin.includes('onrender.com')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('CORS Error: Origin not allowed'));
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -18,27 +19,32 @@ app.use(cors({
 
 app.use(express.json());
 
-// --- UPDATED USER BIO ROUTE ---
-// Fixed the ID handling to match your frontend call: /user/69d948...
+// --- BIO UPDATE ROUTE ---
+// Fixes the 404 for /user/69d948...
 app.put('/user/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { bio } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(id, { bio }, { new: true });
+    // Replace 'User' with your actual Model name
+    const updatedUser = await mongoose.model('User').findByIdAndUpdate(id, { bio }, { new: true });
     res.json(updatedUser);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update bio" });
+    res.status(500).json({ error: "Update failed" });
   }
 });
 
-// --- UPDATED GALLERY ROUTE ---
-// Fixed the 404 issue for: /posts/user/Keerthana
+// --- GALLERY FETCH ROUTE ---
+// Fixes the 404 for /posts/user/Keerthana
 app.get('/posts/user/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const posts = await Post.find({ uploader: username }).sort({ createdAt: -1 });
+    // Ensure 'uploader' matches your MongoDB field exactly
+    const posts = await mongoose.model('Post').find({ uploader: username });
     res.json(posts || []);
   } catch (err) {
-    res.status(500).json({ error: "Gallery fetch failed" });
+    res.status(500).json({ error: "Fetch failed" });
   }
 });
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
