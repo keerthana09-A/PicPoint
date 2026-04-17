@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import './Auth.css';
 
-const Auth = ({ onLogin }) => { // 1. Accept onLogin prop
+const Auth = ({ onLogin }) => {
   const [isSignup, setIsSignup] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-// Replace localhost with your actual Render link
-const res = await fetch(`https://picpoint-backend.onrender.com/login`, { ... });
-  // 2. Handle form submission
-  const handleSubmit = (e) => {
+
+  // MOVE THE FETCH INSIDE THE SUBMIT HANDLER
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onLogin(); 
+    try {
+      const res = await fetch(`https://picpoint-backend.onrender.com/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ /* your form data */ })
+      });
+      
+      if (res.ok) {
+        onLogin();
+      }
+    } catch (err) {
+      console.error("Login failed", err);
+    }
   };
 
   return (
