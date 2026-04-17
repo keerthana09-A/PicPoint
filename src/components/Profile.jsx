@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// REMOVED: import { useNavigate } from 'react-router-dom';  (Vercel fails if this is unused)
+// Note: We don't import useNavigate here because it's not being used in this file
 import './Profile.css';
 
 const Profile = () => {
-  // 1. UPDATE THIS URL to your actual Render Backend URL
+  // This is the "brain" address. It must be your Render URL for the bio to save online.
   const BACKEND_URL = "https://picpoint-backend.onrender.com"; 
 
   const [myPosts, setMyPosts] = useState([]);
@@ -16,7 +16,7 @@ const Profile = () => {
   );
   const [editBio, setEditBio] = useState(user.bio);
 
-  // 2. Wrapped in useCallback to prevent "missing dependency" build errors on Vercel
+  // --- FEATURE: FETCH POSTS (Restored & Optimized) ---
   const fetchMyPosts = useCallback(async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/posts/user/${user.username}?t=${Date.now()}`);
@@ -31,11 +31,13 @@ const Profile = () => {
     fetchMyPosts(); 
   }, [fetchMyPosts]);
 
+  // --- FEATURE: LOGOUT ---
   const handleLogout = () => {
     localStorage.removeItem('picpoint_user');
     window.location.href = "/"; 
   };
 
+  // --- FEATURE: SAVE BIO (Fully Active) ---
   const saveProfile = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/user/${user._id}`, {
@@ -52,6 +54,7 @@ const Profile = () => {
     } catch (err) { console.error("Update error:", err); }
   };
 
+  // --- FEATURE: DELETE POST (Fully Active) ---
   const handleDeletePost = async (postId) => {
     if (window.confirm("Are you sure you want to delete this post?")) {
       try {
@@ -64,6 +67,7 @@ const Profile = () => {
     }
   };
 
+  // --- FEATURE: EDIT CAPTION (Fully Active) ---
   const handleEditPost = async (post) => {
     const newCaption = prompt("Edit your caption:", post.caption);
     if (newCaption !== null && newCaption !== post.caption) {
@@ -119,6 +123,7 @@ const Profile = () => {
         </div>
       </header>
 
+      {/* GALLERY GRID */}
       <div className="profile-gallery-grid">
         {myPosts.map(post => (
           <div key={post._id} className="gallery-item">
@@ -148,6 +153,7 @@ const Profile = () => {
         ))}
       </div>
 
+      {/* COMMENTS MODAL */}
       {viewingComments && (
         <div className="modal-overlay" onClick={() => setViewingComments(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
