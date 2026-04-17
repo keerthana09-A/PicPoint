@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Ensure cors is required
+const cors = require('cors'); 
 const app = express();
 
 const axios = require('axios');
@@ -10,15 +10,12 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3002;
 
 // --- UPDATED MIDDLEWARE SECTION ---
-// This fix allows the "Save Bio" and "Photo Gallery" features to work on Vercel
+// This version uses origin: true to automatically trust your specific Vercel URL
+// This is the most reliable way to fix the "blocked by CORS policy" errors
 app.use(cors({
-  origin: [
-    "https://pic-point-od46.vercel.app", // Your primary Vercel URL
-    "https://pic-point-59vx.vercel.app", // Your secondary Vercel URL
-    "http://localhost:3000"              // Keep local testing enabled
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
+    origin: true, 
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
 }));
 
 app.use(express.json({ limit: '50mb' }));

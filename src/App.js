@@ -6,6 +6,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 function App() {
   const [user, setUser] = useState(null);
 
+  // --- CRITICAL: THE BACKEND LINK ---
+  // We define it here once so all components use the same "source of truth"
+  const BACKEND_URL = "https://picpoint-backend.onrender.com";
+
   useEffect(() => {
     const savedUser = localStorage.getItem('picpoint_user');
     if (savedUser) {
@@ -21,20 +25,23 @@ function App() {
   return (
     <Router>
       <div className="App">
-        {/* 2. Background is placed here so it is visible on ALL routes */}
-
         <Routes>
           <Route 
             path="/" 
             element={
               !user ? (
-                <Auth onAuthSuccess={handleAuthSuccess} />
+                // Pass the URL down as a "prop"
+                <Auth onAuthSuccess={handleAuthSuccess} backendUrl={BACKEND_URL} />
               ) : (
-                <Dashboard />
+                // Pass the URL to the Dashboard so your Profile can use it
+                <Dashboard backendUrl={BACKEND_URL} />
               )
             } 
           />
-          <Route path="/login" element={<Auth onAuthSuccess={handleAuthSuccess} />} />
+          <Route 
+            path="/login" 
+            element={<Auth onAuthSuccess={handleAuthSuccess} backendUrl={BACKEND_URL} />} 
+          />
         </Routes>
       </div>
     </Router>
