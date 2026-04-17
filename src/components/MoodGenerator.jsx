@@ -18,19 +18,25 @@ const MoodGenerator = () => {
 
 const getCalm = async (mood) => {
   setLoading(true);
-  setResult(null); // Clear previous result to trigger a fresh UI state
+  setResult(null);
 
   try {
-    const response = await fetch(`http://localhost:3002/api/ai/mood-generator?mood=${encodeURIComponent(mood)}`);
-    const data = await response.json();
+    // Adding a timestamp (t) makes the URL unique every millisecond
+    const response = await fetch(
+      `http://localhost:3002/api/ai/mood-generator?mood=${encodeURIComponent(mood)}&t=${Date.now()}`
+    );
+    
+    if (!response.ok) throw new Error("Server Error");
 
-    console.log("Image Data Received:", data);
+    const imageBlob = await response.blob();
+    const imageObjectUrl = URL.createObjectURL(imageBlob);
 
-    if (data.imageUrl) {
-      setResult(data);
-    } else {
-      alert("Server sent data, but no image URL was found.");
-    }
+    setResult({
+      mood: mood,
+      imageUrl: imageObjectUrl,
+      quote: "Every moment is a fresh beginning."
+    });
+
   } catch (err) {
     console.error("Connection Error:", err);
   } finally {
@@ -80,20 +86,12 @@ const getCalm = async (mood) => {
 {result && result.imageUrl && (
   <div className="mood-result-display">
     <h3>Your {result.mood} Zen Visualization</h3>
-    
     <img 
-  key={result.imageUrl} 
-  src={result.imageUrl} 
-  alt="Peaceful AI Art" 
-  className="peace-image"
-  // This is the most important part for 403 errors:
-  referrerPolicy="no-referrer" 
-  // Keep this to handle cross-origin issues:
-  crossOrigin="anonymous" 
-  onLoad={() => console.log("✅ Rendered!")}
-  onError={(e) => console.log("❌ Failed again:", e)}
-/>
-    
+      key={result.imageUrl} // <--- Adding this forces React to refresh
+      src={result.imageUrl} 
+      alt={`AI visualization of ${result.mood}`} 
+      className="peace-image"
+    />
     <p className="peace-quote">{result.quote}</p>
   </div>
 )}

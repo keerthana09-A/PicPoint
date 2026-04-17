@@ -1,43 +1,15 @@
-const express = require('express');
-const cors = require('cors');
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
 
-// This tells the backend to trust your Vercel frontend
-app.use(cors({
-  origin: ["https://pic-point-od46.vercel.app", "https://pic-point-od46-8c3gz1d2x-keerthana09-as-projects.vercel.app"],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
 
-app.use(express.json());
-
-// This fixes the "Cannot GET /" error
-app.get('/', (req, res) => {
-  res.send("PicPoint API is live and working!");
-});
-
-// GET user posts (Fixes the 404 in Screenshot 154616)
-app.get('/posts/user/:username', async (req, res) => {
-  try {
-    const posts = await mongoose.model('Post').find({ uploader: req.params.username });
-    res.json(posts);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// UPDATE bio (Fixes the PUT error in Screenshot 160031)
-app.put('/user/:id', async (req, res) => {
-  try {
-    const updated = await mongoose.model('User').findByIdAndUpdate(
-      req.params.id, 
-      { bio: req.body.bio }, 
-      { new: true }
-    );
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: "Update failed" });
-  }
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals

@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Profile from './components/Profile';
 
 function App() {
   const [user, setUser] = useState(null);
-
-  // --- CRITICAL: THE BACKEND LINK ---
-  // We define it here once so all components use the same "source of truth"
-  const BACKEND_URL = "https://picpoint-backend.onrender.com";
 
   useEffect(() => {
     const savedUser = localStorage.getItem('picpoint_user');
@@ -23,29 +20,28 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route 
-            path="/" 
-            element={
-              !user ? (
-                // Pass the URL down as a "prop"
-                <Auth onAuthSuccess={handleAuthSuccess} backendUrl={BACKEND_URL} />
-              ) : (
-                // Pass the URL to the Dashboard so your Profile can use it
-                <Dashboard backendUrl={BACKEND_URL} />
-              )
-            } 
-          />
-          <Route 
-            path="/login" 
-            element={<Auth onAuthSuccess={handleAuthSuccess} backendUrl={BACKEND_URL} />} 
-          />
-        </Routes>
-      </div>
-    </Router>
-  );
+  <Router>
+    <div className="App">
+      <Routes>
+        {/* This main route handles your existing Auth/Dashboard toggle */}
+        <Route 
+          path="/" 
+          element={
+            !user ? (
+              <Auth onAuthSuccess={handleAuthSuccess} />
+            ) : (
+              <Dashboard />
+            )
+          } 
+        />
+        
+        {/* We add this "ghost" route. It won't be visible, but it 
+            provides the 'context' needed so Profile doesn't crash. */}
+        <Route path="/login" element={<Auth onAuthSuccess={handleAuthSuccess} />} />
+      </Routes>
+    </div>
+  </Router>
+);
 }
 
 export default App;
