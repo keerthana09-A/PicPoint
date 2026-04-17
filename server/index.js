@@ -1,9 +1,14 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors'); 
 const app = express();
 
+
+app.get('/', (req, res) => {
+  res.send("PicPoint Backend is LIVE");
+});
+
+// ... your other routes (PUT /user/:id, etc.)
 const axios = require('axios');
 // Load Environment Variables
 const MONGO_URI = process.env.MONGO_URI;
