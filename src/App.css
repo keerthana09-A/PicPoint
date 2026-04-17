@@ -27,3 +27,58 @@
   border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* Smooth 3D Entrance for all containers */
+.container, .card, .dashboard-content {
+  animation: slideUp3D 0.8s ease-out;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+}
+
+@keyframes slideUp3D {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) perspective(1000px) rotateX(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) perspective(1000px) rotateX(0deg);
+  }
+}
+
+/* Hover effect for buttons/cards to feel 3D */
+button:hover, .post-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 15px 35px rgba(0, 210, 255, 0.4);
+}
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(15px);
+  border-radius: 20px;
+  border: 1px solid rgba(0, 210, 255, 0.2);
+}
+
+.guest-btn {
+  background: transparent;
+  border: 2px solid #00d2ff;
+  color: #00d2ff;
+  margin-top: 10px;
+}
+
+.guest-btn:hover {
+  background: rgba(0, 210, 255, 0.1);
+}
+
+.divider {
+  margin: 20px 0;
+  color: #888;
+  font-size: 0.8rem;
+  text-align: center;
+}

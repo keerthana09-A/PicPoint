@@ -11,4 +11,13 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-
+/* index.css */
+body, html, #root, .App {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  /* This removes the black curtain */
+  background: transparent !important; 
+  overflow-x: hidden;
+}

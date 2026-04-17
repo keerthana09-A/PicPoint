@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const app = express();
 
+
+const axios = require('axios');
 // Load Environment Variables
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3002;
@@ -207,4 +209,74 @@ app.get('/api/ai/test-images', async (req, res) => {
   }
 });
 
+// --- MOOD GENERATOR ROUTE ---
+// You might need: npm install axios
+app.get('/api/ai/mood-generator', async (req, res) => {
+  const { mood } = req.query;
+  const seed = Math.floor(Math.random() * 1000000);
+
+  // We keep your original prompt but add "unique colors" 
+  // to force the AI to distinguish between the moods.
+  const prompt = `A highly detailed, peaceful meditation landscape representing a ${mood} mood, unique atmosphere, cinematic lighting, 4k`;
+  
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=1024&height=1024&nologo=true`;
+
+  try {
+    console.log(`📡 Generating image for: ${mood}`);
+
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+    const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+
+    res.json({ 
+      mood, 
+      imageUrl: dataUrl, 
+      quote: "Take a deep breath. Let this peace settle your mind." 
+    });
+  } catch (err) {
+    console.error("Proxy Error:", err.message);
+    res.status(500).json({ error: "Proxy failed" });
+  }
+});
+
+// --- UPDATED LOGIN ROUTE ---
+app.post('/login', async (req, res) => {
+    const { email, password, isGuest } = req.body;
+
+    // If they clicked "Browse as Guest"
+    if (isGuest) {
+        return res.json({ 
+            user: { 
+                _id: "guest_id_123", 
+                username: "Guest_Explorer", 
+                email: "guest@picpoint.com",
+                isGuest: true // This flag is the secret to locking features
+            } 
+        });
+    }
+
+    // Normal Login logic
+    const user = await User.findOne({ email, password });
+    if (user) res.json({ user });
+    else res.status(401).json({ message: "Invalid credentials" });
+});
+app.post('/login', async (req, res) => {
+    const { username, password, isGuest } = req.body;
+
+    // Handle Guest Entry
+    if (isGuest) {
+        return res.json({ 
+            user: { 
+                _id: "guest_user", 
+                username: "Guest", 
+                isGuest: true // This is the flag that locks your UI
+            } 
+        });
+    }
+
+    // Existing Login Logic
+    const user = await User.findOne({ username, password });
+    if (user) res.json({ user });
+    else res.status(401).json({ message: "Invalid credentials" });
+});
 app.listen(PORT, () => console.log(`🚀 PicPoint Server running on Port ${PORT}`));

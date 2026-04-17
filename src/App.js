@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Profile from './components/Profile';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Background3D from './components/Background3D'; // 1. Import the background
 
 function App() {
   const [user, setUser] = useState(null);
@@ -20,28 +20,27 @@ function App() {
   };
 
   return (
-  <Router>
-    <div className="App">
-      <Routes>
-        {/* This main route handles your existing Auth/Dashboard toggle */}
-        <Route 
-          path="/" 
-          element={
-            !user ? (
-              <Auth onAuthSuccess={handleAuthSuccess} />
-            ) : (
-              <Dashboard />
-            )
-          } 
-        />
-        
-        {/* We add this "ghost" route. It won't be visible, but it 
-            provides the 'context' needed so Profile doesn't crash. */}
-        <Route path="/login" element={<Auth onAuthSuccess={handleAuthSuccess} />} />
-      </Routes>
-    </div>
-  </Router>
-);
+    <Router>
+      <div className="App">
+        {/* 2. Background is placed here so it is visible on ALL routes */}
+        <Background3D /> 
+
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              !user ? (
+                <Auth onAuthSuccess={handleAuthSuccess} />
+              ) : (
+                <Dashboard />
+              )
+            } 
+          />
+          <Route path="/login" element={<Auth onAuthSuccess={handleAuthSuccess} />} />
+        </Routes>
+      </div>
+    </Router>
+  );
 }
 
 export default App;
