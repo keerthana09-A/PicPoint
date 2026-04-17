@@ -1,49 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './Profile.css';
 
-const Profile = () => {
-  // CRITICAL: This MUST match your Render Web Service URL exactly
-  const BACKEND_URL = "https://picpoint-backend.onrender.com"; 
-
+// Receiving backendUrl as a prop from App.js
+const Profile = ({ backendUrl }) => { 
+  const BACKEND_URL = backendUrl || "https://picpoint-backend.onrender.com";
+  
   const [myPosts, setMyPosts] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [viewingComments, setViewingComments] = useState(null);
-  const [activeMenu, setActiveMenu] = useState(null); 
-  
   const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem('picpoint_user')) || { username: 'User', bio: 'PicPoint Explorer' }
+    JSON.parse(localStorage.getItem('picpoint_user')) || { username: 'User', bio: '' }
   );
   const [editBio, setEditBio] = useState(user.bio);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [viewingComments, setViewingComments] = useState(null);
 
   // --- FEATURE: PHOTO DISPLAY ---
   const fetchMyPosts = useCallback(async () => {
     if (!user.username || user.username === 'User') return;
     try {
-      // Added a cache-buster (?t=) to force a fresh fetch every time
+      // ?t= cache-buster forces a fresh fetch to show new uploads
       const res = await fetch(`${BACKEND_URL}/posts/user/${user.username}?t=${Date.now()}`);
-      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+      if (!res.ok) throw new Error("Server error");
       const data = await res.json();
       setMyPosts(Array.isArray(data) ? data : []);
-    } catch (err) { 
-      console.error("❌ Gallery Fetch error:", err); 
+    } catch (err) {
+      console.error("❌ Gallery Fetch error:", err);
     }
   }, [user.username, BACKEND_URL]);
 
-  useEffect(() => { 
-    fetchMyPosts(); 
+  useEffect(() => {
+    fetchMyPosts();
   }, [fetchMyPosts]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('picpoint_user');
-    window.location.href = "/"; 
-  };
-
-  // --- FEATURE: BIO EDITING & SAVING ---
+  // --- FEATURE: BIO SAVING ---
   const saveProfile = async () => {
-    if (!user._id) {
-        alert("User ID missing. Please log in again.");
-        return;
-    }
+    if (!user._id) return alert("Please log in again.");
     try {
       const res = await fetch(`${BACKEND_URL}/user/${user._id}`, {
         method: 'PUT',
@@ -57,18 +48,15 @@ const Profile = () => {
         setUser(updatedUser);
         setIsEditing(false);
         alert("Bio updated successfully!");
-      } else {
-        const errorData = await res.json();
-        console.error("Save failed:", errorData);
       }
-    } catch (err) { 
-      console.error("Update error:", err); 
-      alert("Failed to connect to server. Check console for CORS errors.");
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("CORS or Connection Error. Check console.");
     }
   };
 
   const handleDeletePost = async (postId) => {
-    if (window.confirm("Are you sure you want to delete this post?")) {
+    if (window.confirm("Delete this post?")) {
       try {
         const res = await fetch(`${BACKEND_URL}/posts/${postId}`, { method: 'DELETE' });
         if (res.ok) {
@@ -79,13 +67,17 @@ const Profile = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('picpoint_user');
+    window.location.href = "/";
+  };
+
   return (
     <div className="profile-page" onClick={() => setActiveMenu(null)}>
       <header className="profile-header">
         <div className="profile-avatar-container">
           <div className="profile-avatar-main">{user.username.charAt(0)}</div>
         </div>
-
         <div className="profile-info-main">
           <div className="profile-top-row">
             <h1>{user.username}</h1>
@@ -94,11 +86,9 @@ const Profile = () => {
               <button className="logout-btn" onClick={handleLogout}>Logout</button>
             </div>
           </div>
-
           <div className="profile-stats">
             <span><strong>{myPosts.length}</strong> posts</span>
           </div>
-
           <div className="profile-bio">
             {isEditing ? (
               <div className="edit-bio-box">
@@ -130,7 +120,6 @@ const Profile = () => {
                     e.stopPropagation();
                     setActiveMenu(activeMenu === post._id ? null : post._id);
                   }}>⋮</button>
-                  
                   {activeMenu === post._id && (
                     <div className="post-options-dropdown" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleDeletePost(post._id)} className="delete-opt">Delete Post</button>
