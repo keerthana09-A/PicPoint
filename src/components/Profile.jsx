@@ -1,28 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import './Profile.css';
+// import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
+// ... other imports
 
 const Profile = () => {
-  const navigate = useNavigate();
-  const [myPosts, setMyPosts] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [viewingComments, setViewingComments] = useState(null);
-  const [activeMenu, setActiveMenu] = useState(null); // State for the 3-dot menu
-  
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem('picpoint_user')) || { username: 'User', bio: 'PicPoint Explorer' }
-  );
-  const [editBio, setEditBio] = useState(user.bio);
+  // Line 6 fix: REMOVED 'const navigate = useNavigate()' since it wasn't used
+  const [posts, setPosts] = useState([]);
 
-  const fetchMyPosts = async () => {
+  // useEffect fix: Wrap your function in useCallback so React is happy
+  const fetchMyPosts = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3002/posts/user/${user.username}?t=${Date.now()}`);
-      const data = await res.json();
-      setMyPosts(Array.isArray(data) ? data : []);
-    } catch (err) { console.error("Fetch error:", err); }
-  };
+      const response = await fetch('https://picpoint-backend.onrender.com/api/my-posts');
+      const data = await response.json();
+      setPosts(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []); // Empty array here is fine
 
-  useEffect(() => { fetchMyPosts(); }, [user.username]);
+  useEffect(() => {
+    fetchMyPosts();
+  }, [fetchMyPosts]); // Now we can safely include it here
+// const Profile = () => {
+//   // const navigate = useNavigate();
+//   const [myPosts, setMyPosts] = useState([]);
+//   const [isEditing, setIsEditing] = useState(false);
+//   const [viewingComments, setViewingComments] = useState(null);
+//   const [activeMenu, setActiveMenu] = useState(null); // State for the 3-dot menu
+  
+//   const [user, setUser] = useState(
+//     JSON.parse(localStorage.getItem('picpoint_user')) || { username: 'User', bio: 'PicPoint Explorer' }
+//   );
+//   const [editBio, setEditBio] = useState(user.bio);
+
+  // const fetchMyPosts = async () => {
+  //   try {
+  //     const res = await fetch(`http://localhost:3002/posts/user/${user.username}?t=${Date.now()}`);
+  //     const data = await res.json();
+  //     setMyPosts(Array.isArray(data) ? data : []);
+  //   } catch (err) { console.error("Fetch error:", err); }
+  // };
+
+  // useEffect(() => { fetchMyPosts(); }, [user.username]);
 
   const handleLogout = () => {
     localStorage.removeItem('picpoint_user');
