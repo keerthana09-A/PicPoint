@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Note: We don't import useNavigate here because it's not being used in this file
 import './Profile.css';
 
 const Profile = () => {
-  // This is the "brain" address. It must be your Render URL for the bio to save online.
+  // CRITICAL: Ensure this matches your Render service URL exactly
   const BACKEND_URL = "https://picpoint-backend.onrender.com"; 
 
   const [myPosts, setMyPosts] = useState([]);
@@ -16,9 +15,10 @@ const Profile = () => {
   );
   const [editBio, setEditBio] = useState(user.bio);
 
-  // --- FEATURE: FETCH POSTS (Restored & Optimized) ---
+  // --- FEATURE: PHOTO DISPLAY (RESTORED) ---
   const fetchMyPosts = useCallback(async () => {
     try {
+      // Points to Render backend to fetch images from the cloud database
       const res = await fetch(`${BACKEND_URL}/posts/user/${user.username}?t=${Date.now()}`);
       const data = await res.json();
       setMyPosts(Array.isArray(data) ? data : []);
@@ -31,13 +31,12 @@ const Profile = () => {
     fetchMyPosts(); 
   }, [fetchMyPosts]);
 
-  // --- FEATURE: LOGOUT ---
   const handleLogout = () => {
     localStorage.removeItem('picpoint_user');
     window.location.href = "/"; 
   };
 
-  // --- FEATURE: SAVE BIO (Fully Active) ---
+  // --- FEATURE: BIO EDITING & SAVING (RESTORED) ---
   const saveProfile = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/user/${user._id}`, {
@@ -46,15 +45,17 @@ const Profile = () => {
         body: JSON.stringify({ bio: editBio })
       });
       if (res.ok) {
+        // Updates both the local state and localStorage so it stays saved
         const updatedUser = { ...user, bio: editBio };
         localStorage.setItem('picpoint_user', JSON.stringify(updatedUser));
         setUser(updatedUser);
         setIsEditing(false);
       }
-    } catch (err) { console.error("Update error:", err); }
+    } catch (err) { 
+      console.error("Update error:", err); 
+    }
   };
 
-  // --- FEATURE: DELETE POST (Fully Active) ---
   const handleDeletePost = async (postId) => {
     if (window.confirm("Are you sure you want to delete this post?")) {
       try {
@@ -67,7 +68,6 @@ const Profile = () => {
     }
   };
 
-  // --- FEATURE: EDIT CAPTION (Fully Active) ---
   const handleEditPost = async (post) => {
     const newCaption = prompt("Edit your caption:", post.caption);
     if (newCaption !== null && newCaption !== post.caption) {
@@ -123,11 +123,11 @@ const Profile = () => {
         </div>
       </header>
 
-      {/* GALLERY GRID */}
+      {/* PHOTO DISPLAY GRID */}
       <div className="profile-gallery-grid">
         {myPosts.map(post => (
           <div key={post._id} className="gallery-item">
-            <img src={post.imageUrl} alt="gallery" />
+            <img src={post.imageUrl} alt="User upload" />
             <div className="gallery-overlay">
               <div className="post-options-container">
                 <button className="three-dots-btn" onClick={(e) => {
@@ -147,13 +147,11 @@ const Profile = () => {
                 <span>❤️ {post.likes?.length || 0}</span>
                 <span>💬 {post.comments?.length || 0}</span>
               </div>
-              <p className="click-hint">View Comments</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* COMMENTS MODAL */}
       {viewingComments && (
         <div className="modal-overlay" onClick={() => setViewingComments(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
