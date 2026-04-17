@@ -1,17 +1,26 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors = require('cors'); // Ensure cors is required
 const app = express();
-
 
 const axios = require('axios');
 // Load Environment Variables
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3002;
 
-// Middleware
-app.use(cors());
+// --- UPDATED MIDDLEWARE SECTION ---
+// This fix allows the "Save Bio" and "Photo Gallery" features to work on Vercel
+app.use(cors({
+  origin: [
+    "https://pic-point-od46.vercel.app", // Your primary Vercel URL
+    "https://pic-point-59vx.vercel.app", // Your secondary Vercel URL
+    "http://localhost:3000"              // Keep local testing enabled
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -59,7 +68,6 @@ app.post('/signup', async (req, res) => {
 
 app.get('/api/ai/test-images', async (req, res) => {
   try {
-    // A larger pool of high-quality IDs to pick from
     const pool = [
       { name: "Nature", trait: "Peaceful", ids: ["photo-1501854140801-50d01698950b", "photo-1441974231531-c6227db76b6e", "photo-1470071459604-3b5ec3a7fe05"] },
       { name: "Cyber", trait: "Bold", ids: ["photo-1550684848-fac1c5b4e853", "photo-1518770660439-4636190af475", "photo-1510511459019-5dee0c12fe85"] },
@@ -69,23 +77,20 @@ app.get('/api/ai/test-images', async (req, res) => {
     ];
 
     const finalImages = pool.map((cat, i) => {
-      // Pick one random ID from the 3 options in each category
       const randomId = cat.ids[Math.floor(Math.random() * cat.ids.length)];
-      
       return {
         _id: `ai_${Date.now()}_${i}_${Math.random()}`,
-        // The timestamp (?t=${Date.now()}) kills the browser cache
         url: `https://images.unsplash.com/${randomId}?auto=format&fit=crop&w=600&q=80&t=${Date.now()}_${i}`,
         trait: cat.trait,
         category: cat.name
       };
     });
-
     res.json(finalImages);
   } catch (err) {
     res.status(500).json({ error: "Failed to generate images" });
   }
 });
+
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email, password });
@@ -149,8 +154,6 @@ app.post('/posts/:id/comment', async (req, res) => {
 });
 
 // --- PROFILE & GALLERY REPAIR ---
-
-// 1. EDIT PROFILE: This handles the PUT request from Profile.jsx
 app.put('/user/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -167,63 +170,26 @@ app.put('/user/:id', async (req, res) => {
     }
 });
 
-// 2. MY GALLERY: This finds images where 'uploader' matches your username
 app.get('/posts/user/:username', async (req, res) => {
     try {
         const { username } = req.params;
         console.log(`🔍 Searching for posts by: ${username}`);
-        
-        // This looks at the 'uploader' field in your PostSchema
         const userPosts = await Post.find({ uploader: username }).sort({ createdAt: -1 });
-        
         res.json(userPosts);
     } catch (err) {
         console.error("❌ Gallery Fetch Error:", err);
         res.status(500).json({ error: "Could not load gallery" });
     }
 });
-// --- PERSONALITY TEST ROUTE (DYNAMNIC & STABLE) ---
-app.get('/api/ai/test-images', async (req, res) => {
-  console.log("🚀 Generating Fresh Test Images...");
-  try {
-    // We use high-quality Unsplash source with random 'sig' to ensure no repeats
-    const categories = [
-      { name: "Nature", trait: "Peaceful & Grounded", imgId: "photo-1501854140801-50d01698950b" },
-      { name: "Cyberpunk", trait: "Visionary & Bold", imgId: "photo-1550684848-fac1c5b4e853" },
-      { name: "Abstract", trait: "Creative & Chaotic", imgId: "photo-1541701494587-cb58502866ab" },
-      { name: "Minimalist", trait: "Focused & Calm", imgId: "photo-1494438639946-1ebd1d20bf85" },
-      { name: "Vintage", trait: "Nostalgic & Warm", imgId: "photo-1518531933037-91b2f5f229cc" }
-    ];
-
-    const finalImages = categories.map((cat, i) => ({
-      _id: `ai_${Date.now()}_${i}`,
-      // Adding a random signal ensures the browser doesn't cache the image
-      url: `https://images.unsplash.com/${cat.imgId}?auto=format&fit=crop&w=600&q=80&sig=${Math.random()}`,
-      trait: cat.trait,
-      category: cat.name
-    }));
-
-    res.json(finalImages);
-  } catch (err) {
-    res.status(500).json({ error: "Image generation failed" });
-  }
-});
 
 // --- MOOD GENERATOR ROUTE ---
-// You might need: npm install axios
 app.get('/api/ai/mood-generator', async (req, res) => {
   const { mood } = req.query;
   const seed = Math.floor(Math.random() * 1000000);
-
-  // We keep your original prompt but add "unique colors" 
-  // to force the AI to distinguish between the moods.
   const prompt = `A highly detailed, peaceful meditation landscape representing a ${mood} mood, unique atmosphere, cinematic lighting, 4k`;
-  
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=1024&height=1024&nologo=true`;
 
   try {
-    console.log(`📡 Generating image for: ${mood}`);
-
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(response.data, 'binary').toString('base64');
     const dataUrl = `data:image/jpeg;base64,${base64Image}`;
@@ -234,49 +200,8 @@ app.get('/api/ai/mood-generator', async (req, res) => {
       quote: "Take a deep breath. Let this peace settle your mind." 
     });
   } catch (err) {
-    console.error("Proxy Error:", err.message);
     res.status(500).json({ error: "Proxy failed" });
   }
 });
 
-// --- UPDATED LOGIN ROUTE ---
-app.post('/login', async (req, res) => {
-    const { email, password, isGuest } = req.body;
-
-    // If they clicked "Browse as Guest"
-    if (isGuest) {
-        return res.json({ 
-            user: { 
-                _id: "guest_id_123", 
-                username: "Guest_Explorer", 
-                email: "guest@picpoint.com",
-                isGuest: true // This flag is the secret to locking features
-            } 
-        });
-    }
-
-    // Normal Login logic
-    const user = await User.findOne({ email, password });
-    if (user) res.json({ user });
-    else res.status(401).json({ message: "Invalid credentials" });
-});
-app.post('/login', async (req, res) => {
-    const { username, password, isGuest } = req.body;
-
-    // Handle Guest Entry
-    if (isGuest) {
-        return res.json({ 
-            user: { 
-                _id: "guest_user", 
-                username: "Guest", 
-                isGuest: true // This is the flag that locks your UI
-            } 
-        });
-    }
-
-    // Existing Login Logic
-    const user = await User.findOne({ username, password });
-    if (user) res.json({ user });
-    else res.status(401).json({ message: "Invalid credentials" });
-});
 app.listen(PORT, () => console.log(`🚀 PicPoint Server running on Port ${PORT}`));
